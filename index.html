@@ -106,6 +106,7 @@ body{
 .sync-row button.signed-in{background:none;border:1px solid rgba(246,244,238,0.3);color:rgba(246,244,238,0.8);}
 .sync-row.connected{padding:6px 12px;}
 .sync-row.connected button{display:none;}
+.sync-row.connected #switchAccountBtn{display:inline-block;padding:4px 9px;font-size:11px;}
 
 .lock-row{
   display:flex;align-items:center;justify-content:space-between;
@@ -134,6 +135,41 @@ body{
 .today-status.unmarked .dot2{background:var(--leave);}
 
 .range-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* Calendar (Log tab) */
+.cal-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.cal-nav button{background:none;border:1.5px solid var(--line);border-radius:8px;width:34px;height:34px;font-size:15px;color:var(--ink);cursor:pointer;}
+.cal-month-label{font-family:'Fraunces',serif;font-weight:600;font-size:16px;}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10.5px;font-weight:700;color:var(--ink-soft);letter-spacing:0.5px;margin-bottom:4px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-day{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;
+  border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;
+  color:var(--ink);cursor:default;background:transparent;
+}
+.cal-day.empty{visibility:hidden;}
+.cal-day.has-entry{cursor:pointer;color:#fff;}
+.cal-day.has-entry:active{opacity:0.75;}
+.cal-day.today{box-shadow:inset 0 0 0 2px var(--stamp);}
+.cal-day.Present, .cal-day.WFH{background:var(--present);}
+.cal-day.Leave, .cal-day.HalfDay{background:var(--leave);}
+.cal-day.PublicHoliday{background:var(--holiday);}
+.cal-day.Absent{background:var(--absent);}
+.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);}
+.cal-legend span{display:flex;align-items:center;gap:5px;}
+.cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.cal-legend .dot.Present{background:var(--present);}
+.cal-legend .dot.Leave{background:var(--leave);}
+.cal-legend .dot.PublicHoliday{background:var(--holiday);}
+.cal-legend .dot.Absent{background:var(--absent);}
+
+.day-detail dl{margin:0;}
+.day-detail .dd-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px;gap:12px;}
+.day-detail .dd-row .dd-label{color:var(--ink-soft);flex-shrink:0;}
+.day-detail .dd-row .dd-val{text-align:right;font-weight:600;}
+.day-detail .dd-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;}
+.day-detail button.btn-primary{margin-top:16px;}
 
 nav.tabs{
   position:sticky;top:0;z-index:20;
@@ -352,6 +388,10 @@ textarea{resize:vertical;min-height:56px;}
 .modal-hd button{background:none;border:none;font-size:22px;color:var(--ink-soft);cursor:pointer;padding:0 4px;}
 
 ::selection{background:var(--stamp-soft);}
+/* iOS Safari auto-zooms on focus into any input/select/textarea under 16px \u2014
+   this keeps every form field at 16px regardless of what a more specific rule set,
+   so tapping a field never triggers that zoom-and-not-zoom-back behavior. */
+input, select, textarea{font-size:16px !important;}
 @media (max-width:380px){
   .stat-chip{min-width:100px;}
 }
@@ -372,6 +412,7 @@ textarea{resize:vertical;min-height:56px;}
     <div class="sync-row" id="syncRow">
       <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Not signed in</span></div>
       <button id="syncBtn">Sign in with Google</button>
+      <button id="switchAccountBtn" style="display:none;">Switch account</button>
     </div>
   </div>
 </div>
@@ -450,15 +491,23 @@ textarea{resize:vertical;min-height:56px;}
 
   <!-- LOG TAB -->
   <section id="tab-log" style="display:none">
-    <div class="filter-row">
-      <select id="logMonthFilter"></select>
-      <select id="logStatusFilter">
-        <option value="">All statuses</option>
-        <option>Present</option><option>Leave</option><option>Public Holiday</option>
-        <option>Absent</option><option>WFH</option><option>Half Day</option>
-      </select>
+    <div class="cal-card">
+      <div class="cal-nav">
+        <button type="button" id="calPrevBtn" aria-label="Previous month">&#8592;</button>
+        <div class="cal-month-label" id="calMonthLabel"></div>
+        <button type="button" id="calNextBtn" aria-label="Next month">&#8594;</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span><i class="dot Present"></i>Present</span>
+        <span><i class="dot Leave"></i>Leave</span>
+        <span><i class="dot PublicHoliday"></i>Holiday</span>
+        <span><i class="dot Absent"></i>Absent</span>
+      </div>
     </div>
-    <div id="logList"></div>
   </section>
 
   <!-- BALANCE TAB -->
@@ -519,6 +568,14 @@ textarea{resize:vertical;min-height:56px;}
       <label>Total leaves allowed (over full articleship)</label>
       <input type="number" id="s-allowed" value="130">
       <button class="btn-secondary" style="margin-top:12px" id="saveSettingsBtn">Save settings</button>
+    </div>
+    <div class="card">
+      <h2><span class="num">&#8644;</span> Backup &amp; merge</h2>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 12px;">Use this to combine data that ended up in two different Google accounts. Export on the device with the account you're moving away from, transfer the file to the other device (email, AirDrop, etc.), then import it there. Merging never overwrites a day that's already recorded here \u2014 it only adds days that are missing.</p>
+      <button class="btn-secondary" id="exportDataBtn">Export current data</button>
+      <label style="margin-top:16px;">Import a backup file</label>
+      <input type="file" id="importFileInput" accept="application/json">
+      <button class="btn-primary" style="margin-top:10px" id="importMergeBtn">Merge imported file into this device</button>
     </div>
   </section>
 
@@ -730,7 +787,7 @@ function persistClients(){
 
 // ---------- Google Drive sync ----------
 const GOOGLE_CLIENT_ID = '133028189439-gk1n4s8p044bauf7licohm22aadhsgcs.apps.googleusercontent.com';
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email';
 const DRIVE_FILENAME = 'leave-tracker-data.json';
 
 let tokenClient = null;
@@ -747,8 +804,15 @@ function setSyncStatus(state, label){
 function updateSyncRowVisibility(){
   document.getElementById('syncRow').classList.toggle('connected', signedIn);
 }
+let signedInEmail = '';
+async function fetchSignedInEmail(){
+  try{
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers:{Authorization:'Bearer '+accessToken} });
+    const data = await res.json();
+    signedInEmail = data.email || '';
+  }catch(e){ console.error('userinfo fetch error', e); signedInEmail = ''; }
+}
 
-let silentAttemptDone = false;
 function initGoogleAuth(){
   if(!window.google || !google.accounts || !google.accounts.oauth2){
     setTimeout(initGoogleAuth, 300);
@@ -761,18 +825,10 @@ function initGoogleAuth(){
       if(resp.error){
         signedIn = false;
         updateSyncRowVisibility();
-        // Only bother the user with an error toast if they explicitly clicked the button \u2014
-        // a failed *silent* attempt on load is expected and should stay invisible.
-        if(silentAttemptDone){
-          setSyncStatus('error','Sign-in failed');
-          showToast('Google sign-in failed \u2014 try again');
-        } else {
-          setSyncStatus('idle','Not signed in');
-        }
-        silentAttemptDone = true;
+        setSyncStatus('error','Sign-in failed');
+        showToast('Google sign-in failed \u2014 try again');
         return;
       }
-      silentAttemptDone = true;
       accessToken = resp.access_token;
       signedIn = true;
       updateSyncRowVisibility();
@@ -780,13 +836,14 @@ function initGoogleAuth(){
       btn.textContent = 'Signed in';
       btn.classList.add('signed-in');
       setSyncStatus('syncing','Syncing with Drive...');
+      await fetchSignedInEmail();
       await syncFromDrive();
+      if(signedInEmail) document.getElementById('syncLabel').textContent = 'Synced \u2014 ' + signedInEmail;
     }
   });
-  // Try to sign in silently first, using a previously-granted session if one exists.
-  // If that's not possible (first time ever, or the browser blocks it), it fails quietly
-  // and the visible "Sign in with Google" button stays there as the fallback.
-  tokenClient.requestAccessToken({prompt:'none'});
+  // No automatic sign-in attempt here \u2014 browsers (Safari especially) block OAuth
+  // popups that aren't triggered by a direct tap, so an auto-attempt on page load just
+  // flashes and fails. The visible "Sign in with Google" button is the real entry point.
 }
 
 async function driveFindFile(){
@@ -1109,47 +1166,72 @@ async function saveToday(){
 }
 
 // ---------- Log ----------
-function populateMonthFilter(){
-  const sel = document.getElementById('logMonthFilter');
-  const months = [...new Set(Object.keys(entries).map(monthKey))].sort().reverse();
-  sel.innerHTML = '<option value="">All months</option>' + months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
-}
-function renderLog(){
-  populateMonthFilter();
-  const monthFilter = document.getElementById('logMonthFilter').value;
-  const statusFilter = document.getElementById('logStatusFilter').value;
-  let dates = Object.keys(entries).sort().reverse();
-  if(monthFilter) dates = dates.filter(d=>monthKey(d)===monthFilter);
-  if(statusFilter) dates = dates.filter(d=>entries[d].status===statusFilter);
-
-  const list = document.getElementById('logList');
-  if(!dates.length){
-    list.innerHTML = '<div class="empty"><div class="big">No entries yet</div>Mark your first day on the Today tab.</div>';
-    return;
-  }
-  let html = '';
-  let lastMonth = null;
-  dates.forEach(d=>{
-    const mk = monthKey(d);
-    if(mk!==lastMonth){ html += `<div class="month-hd">${monthLabel(mk)}</div>`; lastMonth = mk; }
-    const e = entries[d];
-    const dotClass = (e.status||'').replace(/\s+/g,'');
-    const chips = (e.work||[]).map(w=>`<span class="chip">${escapeHtml(w.client)}${w.period?' &middot; '+escapeHtml(w.period):''}</span>`).join('');
-    html += `<div class="entry" onclick="openEdit('${d}')">
-      <div class="dot ${dotClass}"></div>
-      <div class="body">
-        <div class="r1"><span class="date">${fmtDate(d)} &middot; ${e.day.slice(0,3)}</span><span class="status">${e.status||''}</span></div>
-        <div class="meta">${e.dept||''}${e.remark?' &middot; '+e.remark:''}</div>
-        ${chips?`<div class="chips">${chips}</div>`:''}
-      </div>
-    </div>`;
-  });
-  list.innerHTML = html;
-}
 function openEdit(dateStr){
   switchTab('today');
   resetTodayForm(dateStr);
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ---------- Calendar (Log tab) ----------
+let calViewYear, calViewMonth; // 0-indexed month, current viewed month
+function initCalendarView(){
+  const now = new Date();
+  calViewYear = now.getFullYear();
+  calViewMonth = now.getMonth();
+}
+function renderCalendar(){
+  const label = document.getElementById('calMonthLabel');
+  label.textContent = new Date(calViewYear, calViewMonth, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  const firstDow = new Date(calViewYear, calViewMonth, 1).getDay();
+  const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+  const t = todayStr();
+
+  let html = '';
+  for(let i=0;i<firstDow;i++) html += '<div class="cal-day empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = calViewYear+'-'+String(calViewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const e = entries[ds];
+    const statusClass = e ? (e.status||'').replace(/\s+/g,'') : '';
+    const classes = ['cal-day'];
+    if(e){ classes.push('has-entry', statusClass); }
+    if(ds===t) classes.push('today');
+    html += `<div class="${classes.join(' ')}" ${e?`onclick="openDayDetail('${ds}')"`:''}>${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+function calShiftMonth(delta){
+  calViewMonth += delta;
+  if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
+  if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
+  renderCalendar();
+}
+function openDayDetail(dateStr){
+  const e = entries[dateStr];
+  if(!e) return;
+  const labelMap = {'Present':'Present','Leave':'On Leave','Public Holiday':'Public Holiday','Absent':'Absent','WFH':'WFH','Half Day':'Half Day'};
+  const workChips = (e.work||[]).map(w=>`<span class="chip">${escapeHtml(w.client)}${w.period?' &middot; '+escapeHtml(w.period):''}</span>`).join('') || '<span style="color:var(--ink-soft);font-size:12.5px;">No client logged</span>';
+  document.querySelector('#editModalBg .modal-hd h3').textContent = fmtDate(dateStr) + ' \u00b7 ' + e.day;
+  document.getElementById('editModalBody').innerHTML = `
+    <div class="day-detail">
+      <div class="dd-row"><span class="dd-label">Attendance</span><span class="dd-val">${labelMap[e.status]||e.status}</span></div>
+      <div class="dd-row"><span class="dd-label">Department</span><span class="dd-val">${escapeHtml(e.dept||'\u2014')}</span></div>
+      <div class="dd-row"><span class="dd-label">Client(s)</span><div class="dd-chips">${workChips}</div></div>
+      ${e.remark?`<div class="dd-row"><span class="dd-label">Remark</span><span class="dd-val">${escapeHtml(e.remark)}</span></div>`:''}
+      ${e.reason?`<div class="dd-row"><span class="dd-label">Note</span><span class="dd-val">${escapeHtml(e.reason)}</span></div>`:''}
+      ${(e.day==='Saturday'||e.day==='Sunday'||e.holidayWorked) && e.status==='Present' ? `<div class="dd-row"><span class="dd-label">Firm claim</span><span class="dd-val">${e.claimApproved?'Approved':'Pending approval'}</span></div>` : ''}
+      <button type="button" class="btn-primary" id="editDayBtn">Edit this day</button>
+    </div>
+  `;
+  document.getElementById('editDayBtn').addEventListener('click', ()=>{ closeDayModal(); openEdit(dateStr); });
+  document.getElementById('editModalBg').classList.add('show');
+}
+function closeDayModal(){
+  document.getElementById('editModalBg').classList.remove('show');
+}
+function renderLog(){
+  if(calViewYear===undefined) initCalendarView();
+  renderCalendar();
 }
 
 // ---------- Client registry (add-client-first workflow) ----------
@@ -1401,6 +1483,53 @@ function renderInstallBanner(){
   }
 }
 
+// ---------- Backup & merge (for reconciling data across different Google accounts) ----------
+function exportData(){
+  const payload = { entries, clients, settings, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `leave-tracker-backup-${todayStr()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded');
+}
+// Additive merge only: a day already recorded on this device is never overwritten by
+// the imported file \u2014 only days missing here get added in. Client periods are unioned.
+async function importAndMerge(file){
+  if(!file){ showToast('Choose a backup file first'); return; }
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    let addedEntries = 0, skippedEntries = 0, addedClients = 0;
+    if(data.entries){
+      Object.entries(data.entries).forEach(([date, e])=>{
+        if(!entries[date]){ entries[date] = e; addedEntries++; }
+        else { skippedEntries++; }
+      });
+    }
+    if(data.clients){
+      Object.entries(data.clients).forEach(([name, c])=>{
+        if(!clients[name]){ clients[name] = c; addedClients++; }
+        else { (c.periods||[]).forEach(p=>{ if(!clients[name].periods.includes(p)) clients[name].periods.push(p); }); }
+      });
+    }
+    await persistEntries();
+    await persistClients();
+    renderHeader(); renderTodayStatus();
+    ['log','balance','clients'].forEach(t=>{ if(document.getElementById('tab-'+t).style.display!=='none'){
+      if(t==='log') renderLog(); if(t==='balance') renderBalance(); if(t==='clients') renderClients();
+    }});
+    showToast(`Merged: +${addedEntries} day(s) added, ${skippedEntries} already existed, +${addedClients} new client(s)`);
+  }catch(e){
+    console.error('import error', e);
+    showToast("Could not read that file \u2014 make sure it's a backup exported from this app");
+  }
+}
+
 // ---------- Lock toggle & date-range leave tool ----------
 async function toggleLock(){
   settings.locked = !settings.locked;
@@ -1469,10 +1598,19 @@ async function init(){
 
   document.getElementById('lockToggleBtn').addEventListener('click', toggleLock);
   document.getElementById('markRangeBtn').addEventListener('click', markLeaveRange);
+  document.getElementById('exportDataBtn').addEventListener('click', exportData);
+  document.getElementById('importMergeBtn').addEventListener('click', ()=>{
+    const file = document.getElementById('importFileInput').files[0];
+    importAndMerge(file);
+  });
 
   document.getElementById('syncBtn').addEventListener('click', ()=>{
     if(signedIn) return;
-    if(tokenClient) tokenClient.requestAccessToken({prompt:'consent'});
+    if(tokenClient) tokenClient.requestAccessToken({prompt:''});
+    else showToast('Google sign-in is still loading \u2014 try again in a moment');
+  });
+  document.getElementById('switchAccountBtn').addEventListener('click', ()=>{
+    if(tokenClient) tokenClient.requestAccessToken({prompt:'select_account'});
     else showToast('Google sign-in is still loading \u2014 try again in a moment');
   });
 
@@ -1495,8 +1633,10 @@ async function init(){
   document.querySelectorAll('.tab-btn').forEach(b=>{
     b.addEventListener('click', ()=>switchTab(b.dataset.tab));
   });
-  document.getElementById('logMonthFilter').addEventListener('change', renderLog);
-  document.getElementById('logStatusFilter').addEventListener('change', renderLog);
+  document.getElementById('calPrevBtn').addEventListener('click', ()=>calShiftMonth(-1));
+  document.getElementById('calNextBtn').addEventListener('click', ()=>calShiftMonth(1));
+  document.getElementById('closeModal').addEventListener('click', closeDayModal);
+  document.getElementById('editModalBg').addEventListener('click', (e)=>{ if(e.target.id==='editModalBg') closeDayModal(); });
 
   document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
     settings.allowed = parseInt(document.getElementById('s-allowed').value)||130;
