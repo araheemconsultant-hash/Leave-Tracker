@@ -121,6 +121,16 @@ body{
   font-size:12.5px;margin-bottom:14px;font-weight:600;
 }
 
+.today-status{
+  display:flex;align-items:center;gap:8px;border-radius:10px;padding:11px 14px;
+  margin-bottom:12px;font-size:13px;font-weight:700;
+}
+.today-status.marked{background:var(--present-soft);color:var(--present);}
+.today-status.unmarked{background:var(--leave-soft);color:var(--leave);}
+.today-status .dot2{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.today-status.marked .dot2{background:var(--present);}
+.today-status.unmarked .dot2{background:var(--leave);}
+
 .range-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
 nav.tabs{
@@ -377,6 +387,7 @@ textarea{resize:vertical;min-height:56px;}
 
   <!-- TODAY TAB -->
   <section id="tab-today">
+    <div class="today-status" id="todayStatusBanner"></div>
     <div class="lock-row" id="lockRow">
       <span id="lockStatusText">&#128274; Register locked</span>
       <button type="button" id="lockToggleBtn">Unlock to edit</button>
@@ -948,6 +959,19 @@ function renderLockUI(){
     btn.textContent = 'Lock now';
   }
 }
+function renderTodayStatus(){
+  const banner = document.getElementById('todayStatusBanner');
+  const t = todayStr();
+  const e = entries[t];
+  if(e){
+    banner.className = 'today-status marked';
+    const labelMap = {'Present':'Present','Leave':'On Leave','Public Holiday':'Public Holiday','Absent':'Absent','WFH':'WFH','Half Day':'Half Day'};
+    banner.innerHTML = `<span class="dot2"></span> Today's attendance is marked \u2014 ${labelMap[e.status]||e.status}`;
+  } else {
+    banner.className = 'today-status unmarked';
+    banner.innerHTML = `<span class="dot2"></span> Today's attendance isn't marked yet`;
+  }
+}
 function addWorkRow(client, period){
   const id = 'wr'+(workRowCount++);
   const div = document.createElement('div');
@@ -1050,6 +1074,7 @@ async function saveToday(){
   populateDeptList();
   populateClientSelects();
   renderLockUI();
+  renderTodayStatus();
   updateFormLockState(dateStr);
 
   // stamp animation
@@ -1359,6 +1384,7 @@ async function toggleLock(){
   settings.locked = !settings.locked;
   await persistSettings();
   renderLockUI();
+  renderTodayStatus();
   updateFormLockState(document.getElementById('f-date').value);
   showToast(settings.locked ? 'Register locked' : 'Register unlocked \u2014 remember it re-locks after your next save');
 }
@@ -1397,6 +1423,7 @@ async function markLeaveRange(){
   renderHeader();
   renderBalance();
   renderLockUI();
+  renderTodayStatus();
   document.getElementById('lr-start').value = '';
   document.getElementById('lr-end').value = '';
   document.getElementById('lr-reason').value = '';
@@ -1415,6 +1442,7 @@ async function init(){
   renderHeader();
   renderInstallBanner();
   renderLockUI();
+  renderTodayStatus();
   initGoogleAuth();
 
   document.getElementById('lockToggleBtn').addEventListener('click', toggleLock);
