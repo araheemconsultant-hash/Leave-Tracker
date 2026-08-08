@@ -110,8 +110,8 @@ nav.tabs{
   max-width:640px;margin:0 auto;
 }
 nav.tabs button{
-  flex:1;padding:13px 4px;background:none;border:none;
-  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+  flex:1;padding:13px 2px;background:none;border:none;
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
   color:var(--ink-soft);cursor:pointer;border-bottom:2.5px solid transparent;
   transition:color .15s, border-color .15s;
 }
@@ -258,6 +258,42 @@ textarea{resize:vertical;min-height:56px;}
 .bulk-period-row input{flex:1;padding:8px 10px;font-size:13px;}
 .bulk-period-row button{white-space:nowrap;padding:8px 12px;}
 
+/* Client registry */
+.add-client-row{display:flex;gap:8px;margin-bottom:4px;}
+.add-client-row input{flex:1;}
+.add-client-row button{white-space:nowrap;padding:10px 14px;border:none;border-radius:8px;background:var(--stamp);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+.registry-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;background:#fff;}
+.registry-card .rname{font-family:'Fraunces',serif;font-weight:600;font-size:15.5px;}
+.period-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+.period-pill{display:flex;align-items:center;gap:5px;background:var(--line-soft);border-radius:6px;padding:4px 8px;font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--ink);}
+.period-pill button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:14px;line-height:1;padding:0;}
+.add-period-row{display:flex;gap:6px;margin-top:6px;}
+.add-period-row input{flex:1;padding:7px 9px;font-size:12.5px;}
+.add-period-row button{padding:7px 11px;font-size:12px;white-space:nowrap;}
+.registry-empty{text-align:center;padding:24px;color:var(--ink-soft);font-size:13.5px;}
+
+/* Claims */
+.claims-summary{display:flex;gap:10px;margin-bottom:14px;}
+.claims-summary .cs-chip{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+.claims-summary .cs-chip .n{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;}
+.claims-summary .cs-chip.pending .n{color:var(--leave);}
+.claims-summary .cs-chip.approved .n{color:var(--present);}
+.claims-summary .cs-chip .l{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);margin-top:3px;}
+.claim-row{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff;}
+.claim-row .cr-top{display:flex;justify-content:space-between;align-items:baseline;}
+.claim-row .cr-date{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13.5px;}
+.claim-row .cr-tag{font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;padding:2px 7px;border-radius:5px;font-weight:700;}
+.claim-row .cr-tag.Saturday, .claim-row .cr-tag.Sunday{background:var(--present-soft);color:var(--present);}
+.claim-row .cr-tag.Holiday{background:var(--holiday-soft);color:var(--holiday);}
+.claim-row .cr-meta{font-size:12.5px;color:var(--ink-soft);margin:5px 0 10px;}
+.claim-row .cr-actions{display:flex;justify-content:space-between;align-items:center;}
+.claim-badge{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:6px;}
+.claim-badge.pending{background:var(--leave-soft);color:var(--leave);}
+.claim-badge.approved{background:var(--present-soft);color:var(--present);}
+.claim-row button.claim-toggle{border:none;border-radius:7px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.claim-row button.claim-toggle.approve{background:var(--present);color:#fff;}
+.claim-row button.claim-toggle.unapprove{background:none;border:1.5px solid var(--line);color:var(--ink-soft);}
+
 /* Install banner */
 .install-banner{
   background:var(--holiday-soft);border:1px solid var(--holiday);border-radius:10px;
@@ -309,6 +345,7 @@ textarea{resize:vertical;min-height:56px;}
   <button class="tab-btn active" data-tab="today">Today</button>
   <button class="tab-btn" data-tab="log">Log</button>
   <button class="tab-btn" data-tab="balance">Balance</button>
+  <button class="tab-btn" data-tab="claims">Claims</button>
   <button class="tab-btn" data-tab="clients">Clients</button>
 </nav>
 
@@ -348,8 +385,6 @@ textarea{resize:vertical;min-height:56px;}
       <label>Remark category</label>
       <select id="f-remark">
         <option value="">&mdash; none &mdash;</option>
-        <option>Saturday</option>
-        <option>Sunday</option>
         <option>Others</option>
         <option>Winter 2025</option>
         <option>Summer 2026</option>
@@ -387,9 +422,9 @@ textarea{resize:vertical;min-height:56px;}
         <div class="progress-track"><div class="progress-fill" id="balProgress"></div></div>
       </div>
       <div class="bal-row"><span>Leaves allowed</span><span class="v" id="b-allowed">130</span></div>
-      <div class="bal-row sub"><span>+ Saturdays worked</span><span class="v" id="b-sat">0</span></div>
-      <div class="bal-row sub"><span>+ Sundays worked</span><span class="v" id="b-sun">0</span></div>
-      <div class="bal-row sub"><span>+ Public holidays worked</span><span class="v" id="b-ph">0</span></div>
+      <div class="bal-row sub"><span>+ Saturdays worked (firm-approved)</span><span class="v" id="b-sat">0</span></div>
+      <div class="bal-row sub"><span>+ Sundays worked (firm-approved)</span><span class="v" id="b-sun">0</span></div>
+      <div class="bal-row sub"><span>+ Public holidays worked (firm-approved)</span><span class="v" id="b-ph">0</span></div>
       <div class="bal-row"><span>Exam leave taken (all sessions)</span><span class="v" id="b-exam">0</span></div>
       <div class="bal-row"><span>Other leave / absence</span><span class="v" id="b-others">0</span></div>
       <div class="bal-row total"><span>Leave balance</span><span class="v" id="b-total">0</span></div>
@@ -410,8 +445,26 @@ textarea{resize:vertical;min-height:56px;}
     </div>
   </div>
 
+  <!-- CLAIMS TAB -->
+  <section id="tab-claims" style="display:none">
+    <div class="claims-summary">
+      <div class="cs-chip pending"><div class="n" id="claimsPendingCount">0</div><div class="l">Pending</div></div>
+      <div class="cs-chip approved"><div class="n" id="claimsApprovedCount">0</div><div class="l">Approved</div></div>
+    </div>
+    <div id="claimsList"></div>
+  </div>
+
   <!-- CLIENTS TAB -->
   <section id="tab-clients" style="display:none">
+    <div class="card">
+      <h2><span class="num">1</span> Add a client</h2>
+      <div class="add-client-row">
+        <input type="text" id="newClientName" placeholder="e.g. Pak China Investment Company Limited">
+        <button type="button" id="addClientBtn">Add client</button>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">Add each client here first — only registered clients show up when you mark attendance on the Today tab.</p>
+    </div>
+    <div id="clientsRegistryList"></div>
     <div id="clientsList"></div>
   </div>
 </main>
@@ -440,6 +493,7 @@ const ARTICLESHIP_END = '2028-01-31';
 
 let entries = {}; // date -> entry object
 let settings = { allowed: 130, adjustment: -10 };
+let clients = {}; // clientName -> { periods: [periodLabel, ...] }
 let currentStatus = 'Present';
 let workRowCount = 0;
 
@@ -480,7 +534,8 @@ async function loadData(){
       SEED_DATA.forEach(r=>{
         entries[r.date] = {
           date:r.date, day:r.day, status:r.status, dept:r.dept,
-          holidayWorked:false, work:r.work||[], remark:r.remark||'', reason:r.reason||''
+          holidayWorked:false, work:r.work||[], remark:r.remark||'', reason:r.reason||'',
+          claimApproved:false
         };
       });
       persistEntries();
@@ -490,15 +545,42 @@ async function loadData(){
     SEED_DATA.forEach(r=>{
       entries[r.date] = {
         date:r.date, day:r.day, status:r.status, dept:r.dept,
-        holidayWorked:false, work:r.work||[], remark:r.remark||'', reason:r.reason||''
+        holidayWorked:false, work:r.work||[], remark:r.remark||'', reason:r.reason||'',
+        claimApproved:false
       };
     });
   }
+  // migration: backfill claimApproved on any entry saved before this field existed
+  Object.values(entries).forEach(e=>{ if(e.claimApproved===undefined) e.claimApproved=false; });
+
   try{
     const sraw = localStorage.getItem('leave-tracker-settings-v1');
     if(sraw) settings = JSON.parse(sraw);
     else persistSettings();
   }catch(e){ console.error('settings load error', e); }
+
+  try{
+    const craw = localStorage.getItem('leave-tracker-clients-v1');
+    if(craw){
+      clients = JSON.parse(craw);
+    } else {
+      bootstrapClientsFromEntries();
+      persistClients();
+    }
+  }catch(e){ console.error('clients load error', e); bootstrapClientsFromEntries(); }
+}
+// One-time bootstrap: register every client name already appearing in historical
+// work entries, so old data keeps working under the new "registered clients only" rule.
+function bootstrapClientsFromEntries(){
+  Object.values(entries).forEach(e=>{
+    (e.work||[]).forEach(w=>{
+      if(!w.client) return;
+      if(!clients[w.client]) clients[w.client] = { periods: [] };
+      if(w.period && !clients[w.client].periods.includes(w.period)){
+        clients[w.client].periods.push(w.period);
+      }
+    });
+  });
 }
 function persistEntries(){
   try{ localStorage.setItem('leave-tracker-entries-v1', JSON.stringify(entries)); }
@@ -508,6 +590,11 @@ function persistEntries(){
 function persistSettings(){
   try{ localStorage.setItem('leave-tracker-settings-v1', JSON.stringify(settings)); }
   catch(e){ console.error('settings save error', e); }
+  pushToDrive();
+}
+function persistClients(){
+  try{ localStorage.setItem('leave-tracker-clients-v1', JSON.stringify(clients)); }
+  catch(e){ console.error('clients save error', e); }
   pushToDrive();
 }
 
@@ -597,13 +684,17 @@ async function syncFromDrive(){
       const remote = JSON.parse(text || '{}');
       if(remote.entries) entries = remote.entries;
       if(remote.settings) settings = remote.settings;
+      if(remote.clients) clients = remote.clients;
+      Object.values(entries).forEach(e=>{ if(e.claimApproved===undefined) e.claimApproved=false; });
+      if(!Object.keys(clients).length) bootstrapClientsFromEntries();
       localStorage.setItem('leave-tracker-entries-v1', JSON.stringify(entries));
       localStorage.setItem('leave-tracker-settings-v1', JSON.stringify(settings));
+      localStorage.setItem('leave-tracker-clients-v1', JSON.stringify(clients));
     } else {
-      driveFileId = await driveCreateFile(JSON.stringify({entries, settings}));
+      driveFileId = await driveCreateFile(JSON.stringify({entries, settings, clients}));
     }
     setSyncStatus('synced','Synced with Drive');
-    renderHeader(); populateDeptList(); populateClientList();
+    renderHeader(); populateDeptList(); populateClientSelects();
     const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
     switchTab(activeTab);
   }catch(e){
@@ -616,7 +707,7 @@ async function pushToDrive(){
   if(!signedIn || !accessToken) return;
   try{
     setSyncStatus('syncing','Saving to Drive...');
-    const payload = JSON.stringify({entries, settings});
+    const payload = JSON.stringify({entries, settings, clients});
     if(!driveFileId) driveFileId = await driveFindFile();
     if(driveFileId) await driveWriteFile(driveFileId, payload);
     else driveFileId = await driveCreateFile(payload);
@@ -642,12 +733,17 @@ function renderHeader(){
 }
 
 // ---------- Balance calc (mirrors the original spreadsheet formula) ----------
+// Note: Saturdays/Sundays/holidays worked only count toward the balance once
+// they're approved as claimed on the Claims tab (claimApproved === true).
 const EXAM_SESSIONS = ['Winter 2025','Summer 2026','Winter 2026','Summer 2027','Winter 2027'];
+function isWeekendOrHolidayWorked(e){
+  return e.status==='Present' && (e.day==='Saturday' || e.day==='Sunday' || e.holidayWorked);
+}
 function computeBalance(){
   const list = Object.values(entries);
-  const satWorked = list.filter(e=>e.day==='Saturday' && e.status==='Present').length;
-  const sunWorked = list.filter(e=>e.day==='Sunday' && e.status==='Present').length;
-  const phWorked = list.filter(e=>e.holidayWorked && e.status==='Present').length;
+  const satWorked = list.filter(e=>e.day==='Saturday' && e.status==='Present' && e.claimApproved).length;
+  const sunWorked = list.filter(e=>e.day==='Sunday' && e.status==='Present' && e.claimApproved).length;
+  const phWorked = list.filter(e=>e.holidayWorked && e.status==='Present' && e.claimApproved).length;
   const examCounts = {};
   EXAM_SESSIONS.forEach(s=> examCounts[s] = list.filter(e=>e.remark===s).length);
   const examTotal = Object.values(examCounts).reduce((a,b)=>a+b,0);
@@ -693,12 +789,27 @@ function addWorkRow(client, period){
   const div = document.createElement('div');
   div.className = 'work-row';
   div.id = id;
+  const clientNames = Object.keys(clients).sort();
+  const clientOptions = clientNames.length
+    ? '<option value="">Select client...</option>' + clientNames.map(c=>`<option value="${escapeHtml(c)}" ${c===client?'selected':''}>${escapeHtml(c)}</option>`).join('')
+    : '<option value="">No clients added yet</option>';
   div.innerHTML = `
-    <input type="text" placeholder="Client name" list="clientList" class="wr-client" value="${client?escapeHtml(client):''}">
-    <input type="text" placeholder="Audit period" class="wr-period" value="${period?escapeHtml(period):''}">
+    <select class="wr-client">${clientOptions}</select>
+    <select class="wr-period"><option value="">Select period...</option></select>
     <button type="button" class="rm" onclick="document.getElementById('${id}').remove()">&times;</button>
   `;
   document.getElementById('workRows').appendChild(div);
+  const clientSel = div.querySelector('.wr-client');
+  const periodSel = div.querySelector('.wr-period');
+  function refreshPeriods(selectedPeriod){
+    const c = clientSel.value;
+    const periods = (clients[c] && clients[c].periods) || [];
+    periodSel.innerHTML = periods.length
+      ? '<option value="">Select period...</option>' + periods.map(p=>`<option value="${escapeHtml(p)}" ${p===selectedPeriod?'selected':''}>${escapeHtml(p)}</option>`).join('')
+      : '<option value="">No periods added for this client</option>';
+  }
+  refreshPeriods(period);
+  clientSel.addEventListener('change', ()=>refreshPeriods(null));
 }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
@@ -739,6 +850,7 @@ async function saveToday(){
     const period = row.querySelector('.wr-period').value.trim();
     if(client) work.push({client, period: period||null});
   });
+  const prevApproval = entries[dateStr] ? !!entries[dateStr].claimApproved : false;
   const entry = {
     date: dateStr,
     day: dayName(dateStr),
@@ -747,13 +859,14 @@ async function saveToday(){
     holidayWorked: document.getElementById('f-holidayworked').checked,
     work,
     remark: document.getElementById('f-remark').value,
-    reason: document.getElementById('f-reason').value.trim()
+    reason: document.getElementById('f-reason').value.trim(),
+    claimApproved: prevApproval
   };
   entries[dateStr] = entry;
   await persistEntries();
   renderHeader();
   populateDeptList();
-  populateClientList();
+  populateClientSelects();
 
   // stamp animation
   const labelMap = {'Present':'Present','Leave':'On Leave','Public Holiday':'Holiday','Absent':'Absent','WFH':'WFH','Half Day':'Half Day'};
@@ -808,18 +921,101 @@ function openEdit(dateStr){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ---------- Clients ----------
+// ---------- Client registry (add-client-first workflow) ----------
 function populateDeptList(){
   const depts = [...new Set(Object.values(entries).map(e=>e.dept).filter(Boolean))];
   document.getElementById('deptList').innerHTML = depts.map(d=>`<option value="${escapeHtml(d)}">`).join('');
 }
-function populateClientList(){
-  const clients = [...new Set(Object.values(entries).flatMap(e=>(e.work||[]).map(w=>w.client)).filter(Boolean))];
-  let dl = document.getElementById('clientList');
-  if(!dl){ dl = document.createElement('datalist'); dl.id='clientList'; document.body.appendChild(dl); }
-  dl.innerHTML = clients.map(c=>`<option value="${escapeHtml(c)}">`).join('');
+// Refreshes any client <select> currently on screen (kept name distinct from the
+// registry-add helpers below since work-row selects are rebuilt on demand instead).
+function populateClientSelects(){ /* no-op placeholder: work rows rebuild their own options via addWorkRow */ }
+
+async function addClient(name){
+  name = name.trim();
+  if(!name) return;
+  if(clients[name]){ showToast('That client is already added'); return; }
+  clients[name] = { periods: [] };
+  await persistClients();
+  renderRegistry();
+  refreshWorkRowClientOptions();
+  showToast(`Added ${name}`);
 }
+async function addPeriod(clientName, period){
+  period = period.trim();
+  if(!period || !clients[clientName]) return;
+  if(clients[clientName].periods.includes(period)){ showToast('That period is already added'); return; }
+  clients[clientName].periods.push(period);
+  await persistClients();
+  renderRegistry();
+  refreshWorkRowPeriodOptions(clientName);
+}
+async function removePeriod(clientName, period){
+  if(!clients[clientName]) return;
+  clients[clientName].periods = clients[clientName].periods.filter(p=>p!==period);
+  await persistClients();
+  renderRegistry();
+  refreshWorkRowPeriodOptions(clientName);
+}
+// Keeps any work-row selects already on screen in sync after the registry changes,
+// so you don't have to reload/reset the Today form to see a client or period you just added.
+function refreshWorkRowClientOptions(){
+  document.querySelectorAll('.work-row').forEach(row=>{
+    const sel = row.querySelector('.wr-client');
+    const cur = sel.value;
+    const clientNames = Object.keys(clients).sort();
+    sel.innerHTML = clientNames.length
+      ? '<option value="">Select client...</option>' + clientNames.map(c=>`<option value="${escapeHtml(c)}" ${c===cur?'selected':''}>${escapeHtml(c)}</option>`).join('')
+      : '<option value="">No clients added yet</option>';
+  });
+}
+function refreshWorkRowPeriodOptions(clientName){
+  document.querySelectorAll('.work-row').forEach(row=>{
+    const clientSel = row.querySelector('.wr-client');
+    if(clientSel.value !== clientName) return;
+    const periodSel = row.querySelector('.wr-period');
+    const cur = periodSel.value;
+    const periods = (clients[clientName] && clients[clientName].periods) || [];
+    periodSel.innerHTML = periods.length
+      ? '<option value="">Select period...</option>' + periods.map(p=>`<option value="${escapeHtml(p)}" ${p===cur?'selected':''}>${escapeHtml(p)}</option>`).join('')
+      : '<option value="">No periods added for this client</option>';
+  });
+}
+
+function renderRegistry(){
+  const container = document.getElementById('clientsRegistryList');
+  const names = Object.keys(clients).sort();
+  if(!names.length){
+    container.innerHTML = '<div class="registry-empty">No clients added yet \u2014 add one above.</div>';
+    return;
+  }
+  container.innerHTML = names.map(n=>{
+    const periods = clients[n].periods;
+    const periodPills = periods.map(p=>
+      `<span class="period-pill">${escapeHtml(p)}<button type="button" data-client="${escapeHtml(n)}" data-period="${escapeHtml(p)}" class="rm-period">&times;</button></span>`
+    ).join('') || '<span style="font-size:12px;color:var(--ink-soft);">No periods yet</span>';
+    return `<div class="registry-card">
+      <div class="rname">${escapeHtml(n)}</div>
+      <div class="period-list">${periodPills}</div>
+      <div class="add-period-row">
+        <input type="text" class="new-period-input" placeholder="e.g. Jun 30, 2025" data-client="${escapeHtml(n)}">
+        <button type="button" class="btn-secondary add-period-btn" data-client="${escapeHtml(n)}">Add period</button>
+      </div>
+    </div>`;
+  }).join('');
+  container.querySelectorAll('.rm-period').forEach(btn=>{
+    btn.addEventListener('click', ()=>removePeriod(btn.dataset.client, btn.dataset.period));
+  });
+  container.querySelectorAll('.add-period-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const input = container.querySelector(`.new-period-input[data-client="${CSS.escape(btn.dataset.client)}"]`);
+      addPeriod(btn.dataset.client, input.value);
+      input.value='';
+    });
+  });
+}
+
 function renderClients(){
+  renderRegistry();
   const byClient = {};
   Object.values(entries).forEach(e=>{
     (e.work||[]).forEach(w=>{
@@ -833,7 +1029,7 @@ function renderClients(){
   const names = Object.keys(byClient).sort((a,b)=>byClient[b].days-byClient[a].days);
   const container = document.getElementById('clientsList');
   if(!names.length){
-    container.innerHTML = '<div class="empty"><div class="big">No client work logged yet</div>Add a client on the Today tab when you log a day.</div>';
+    container.innerHTML = '';
     return;
   }
   container.innerHTML = `<div class="card" style="padding-top:14px;">
@@ -842,33 +1038,48 @@ function renderClients(){
       const c = byClient[n];
       const periods = Object.entries(c.periods).sort((a,b)=>b[1]-a[1])
         .map(([p,cnt])=>`<span class="period-tag"><b>${cnt}</b> ${escapeHtml(p)}</span>`).join('');
-      return `<div class="client-card" data-client="${escapeHtml(n)}">
+      return `<div class="client-card">
         <div class="crow"><span class="cname">${escapeHtml(n)}</span><span class="cdays">${c.days} day${c.days===1?'':'s'}</span></div>
         <div>${periods}</div>
-        <div class="bulk-period-row">
-          <input type="text" class="bp-input" placeholder="Audit period for entries without one">
-          <button type="button" class="btn-secondary bp-apply">Apply</button>
-        </div>
       </div>`;
     }).join('')}
   </div>`;
+}
 
-  container.querySelectorAll('.client-card').forEach(card=>{
-    const client = card.dataset.client;
-    card.querySelector('.bp-apply').addEventListener('click', async ()=>{
-      const input = card.querySelector('.bp-input');
-      const val = input.value.trim();
-      if(!val) return;
-      let count = 0;
-      Object.values(entries).forEach(e=>{
-        (e.work||[]).forEach(w=>{
-          if(w.client===client && !w.period){ w.period = val; count++; }
-        });
-      });
-      if(count===0){ showToast('Nothing to update \u2014 all entries already have a period'); return; }
+// ---------- Claims (weekend/holiday worked \u2014 pending firm approval) ----------
+function renderClaims(){
+  const dates = Object.keys(entries).filter(d=>isWeekendOrHolidayWorked(entries[d])).sort().reverse();
+  const pending = dates.filter(d=>!entries[d].claimApproved);
+  const approved = dates.filter(d=>entries[d].claimApproved);
+  document.getElementById('claimsPendingCount').textContent = pending.length;
+  document.getElementById('claimsApprovedCount').textContent = approved.length;
+
+  const list = document.getElementById('claimsList');
+  if(!dates.length){
+    list.innerHTML = '<div class="empty"><div class="big">No weekend or holiday work logged yet</div>Days you mark Present on a Saturday, Sunday, or a public holiday show up here for firm approval.</div>';
+    return;
+  }
+  list.innerHTML = dates.map(d=>{
+    const e = entries[d];
+    const tag = e.holidayWorked && e.day!=='Saturday' && e.day!=='Sunday' ? 'Holiday' : e.day;
+    const workStr = (e.work||[]).map(w=>w.client+(w.period?' \u2014 '+w.period:'')).join(', ') || 'No client logged';
+    return `<div class="claim-row" data-date="${d}">
+      <div class="cr-top"><span class="cr-date">${fmtDate(d)}</span><span class="cr-tag ${tag.replace(/\s+/g,'')}">${tag}</span></div>
+      <div class="cr-meta">${escapeHtml(workStr)}</div>
+      <div class="cr-actions">
+        <span class="claim-badge ${e.claimApproved?'approved':'pending'}">${e.claimApproved?'Approved by firm':'Pending approval'}</span>
+        <button type="button" class="claim-toggle ${e.claimApproved?'unapprove':'approve'}" data-date="${d}">${e.claimApproved?'Unapprove':'Mark approved'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.claim-toggle').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const d = btn.dataset.date;
+      entries[d].claimApproved = !entries[d].claimApproved;
       await persistEntries();
-      renderClients();
-      showToast(`Set "${val}" on ${count} ${client} entr${count===1?'y':'ies'}`);
+      renderClaims();
+      renderHeader();
+      showToast(entries[d].claimApproved ? 'Marked approved \u2014 added to balance' : 'Marked pending');
     });
   });
 }
@@ -876,11 +1087,12 @@ function renderClients(){
 // ---------- Tabs ----------
 function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-  ['today','log','balance','clients'].forEach(t=>{
+  ['today','log','balance','claims','clients'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = (t===name)?'block':'none';
   });
   if(name==='log') renderLog();
   if(name==='balance') renderBalance();
+  if(name==='claims') renderClaims();
   if(name==='clients') renderClients();
 }
 
@@ -906,7 +1118,6 @@ async function init(){
   document.getElementById('f-date').value = todayStr();
   resetTodayForm(todayStr());
   populateDeptList();
-  populateClientList();
   renderHeader();
   renderInstallBanner();
   initGoogleAuth();
@@ -923,6 +1134,15 @@ async function init(){
   document.getElementById('addWorkBtn').addEventListener('click', ()=>addWorkRow('',''));
   document.getElementById('saveBtn').addEventListener('click', saveToday);
   document.getElementById('f-date').addEventListener('change', (e)=>resetTodayForm(e.target.value));
+
+  document.getElementById('addClientBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('newClientName');
+    addClient(input.value);
+    input.value='';
+  });
+  document.getElementById('newClientName').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ addClient(e.target.value); e.target.value=''; }
+  });
 
   document.querySelectorAll('.tab-btn').forEach(b=>{
     b.addEventListener('click', ()=>switchTab(b.dataset.tab));
