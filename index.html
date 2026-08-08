@@ -104,6 +104,8 @@ body{
   padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
 }
 .sync-row button.signed-in{background:none;border:1px solid rgba(246,244,238,0.3);color:rgba(246,244,238,0.8);}
+.sync-row.connected{padding:6px 12px;}
+.sync-row.connected button{display:none;}
 
 .lock-row{
   display:flex;align-items:center;justify-content:space-between;
@@ -367,7 +369,7 @@ textarea{resize:vertical;min-height:56px;}
       <div class="stat-chip"><div class="n" id="daysLeft">&mdash;</div><div class="l">Days remaining</div></div>
       <div class="stat-chip" id="balChip"><div class="n" id="balMini">&mdash;</div><div class="l">Est. leave balance</div></div>
     </div>
-    <div class="sync-row">
+    <div class="sync-row" id="syncRow">
       <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Not signed in</span></div>
       <button id="syncBtn">Sign in with Google</button>
     </div>
@@ -742,6 +744,11 @@ function setSyncStatus(state, label){
   document.getElementById('syncLabel').textContent = label;
 }
 
+function updateSyncRowVisibility(){
+  document.getElementById('syncRow').classList.toggle('connected', signedIn);
+}
+
+let silentAttemptDone = false;
 function initGoogleAuth(){
   if(!window.google || !google.accounts || !google.accounts.oauth2){
     setTimeout(initGoogleAuth, 300);
@@ -752,12 +759,23 @@ function initGoogleAuth(){
     scope: DRIVE_SCOPE,
     callback: async (resp)=>{
       if(resp.error){
-        setSyncStatus('error','Sign-in failed');
-        showToast('Google sign-in failed \u2014 try again');
+        signedIn = false;
+        updateSyncRowVisibility();
+        // Only bother the user with an error toast if they explicitly clicked the button \u2014
+        // a failed *silent* attempt on load is expected and should stay invisible.
+        if(silentAttemptDone){
+          setSyncStatus('error','Sign-in failed');
+          showToast('Google sign-in failed \u2014 try again');
+        } else {
+          setSyncStatus('idle','Not signed in');
+        }
+        silentAttemptDone = true;
         return;
       }
+      silentAttemptDone = true;
       accessToken = resp.access_token;
       signedIn = true;
+      updateSyncRowVisibility();
       const btn = document.getElementById('syncBtn');
       btn.textContent = 'Signed in';
       btn.classList.add('signed-in');
@@ -765,6 +783,10 @@ function initGoogleAuth(){
       await syncFromDrive();
     }
   });
+  // Try to sign in silently first, using a previously-granted session if one exists.
+  // If that's not possible (first time ever, or the browser blocks it), it fails quietly
+  // and the visible "Sign in with Google" button stays there as the fallback.
+  tokenClient.requestAccessToken({prompt:'none'});
 }
 
 async function driveFindFile(){
