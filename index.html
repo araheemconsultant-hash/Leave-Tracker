@@ -138,9 +138,9 @@ body{
 
 /* Calendar (Log tab) */
 .cal-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);}
-.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.cal-nav button{background:none;border:1.5px solid var(--line);border-radius:8px;width:34px;height:34px;font-size:15px;color:var(--ink);cursor:pointer;}
-.cal-month-label{font-family:'Fraunces',serif;font-weight:600;font-size:16px;}
+.cal-month-block{margin-bottom:22px;scroll-margin-top:70px;}
+.cal-month-block:last-child{margin-bottom:4px;}
+.cal-month-label{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin-bottom:8px;}
 .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10.5px;font-weight:700;color:var(--ink-soft);letter-spacing:0.5px;margin-bottom:4px;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
 .cal-day{
@@ -156,7 +156,7 @@ body{
 .cal-day.Leave, .cal-day.HalfDay{background:var(--leave);}
 .cal-day.PublicHoliday{background:var(--holiday);}
 .cal-day.Absent{background:var(--absent);}
-.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);}
+.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);position:sticky;top:0;background:var(--paper);z-index:1;}
 .cal-legend span{display:flex;align-items:center;gap:5px;}
 .cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
 .cal-legend .dot.Present{background:var(--present);}
@@ -170,6 +170,17 @@ body{
 .day-detail .dd-row .dd-val{text-align:right;font-weight:600;}
 .day-detail .dd-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;}
 .day-detail button.btn-primary{margin-top:16px;}
+
+/* Pie chart (Clients tab time-spent view) */
+.pie-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;}
+.pie-chart{width:180px;height:180px;border-radius:50%;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s;}
+.pie-chart:active{transform:scale(0.97);}
+.pie-view-label{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1.5px;}
+.pie-legend{display:flex;flex-direction:column;gap:7px;}
+.pie-legend-row{display:flex;align-items:center;gap:8px;font-size:13px;}
+.pie-legend-row .pie-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.pie-legend-row .pl-label{flex:1;}
+.pie-legend-row .pl-val{font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);font-size:12px;}
 
 nav.tabs{
   position:sticky;top:0;z-index:20;
@@ -486,27 +497,20 @@ input, select, textarea{font-size:16px !important;}
       </div>
 
       <button class="btn-primary" id="saveBtn">Save &amp; stamp</button>
+      <button type="button" class="btn-secondary" id="deleteEntryBtn" style="display:none;margin-top:10px;width:100%;background:none;border-color:var(--absent);color:var(--absent);">Delete this day's entry</button>
     </div>
   </section>
 
   <!-- LOG TAB -->
   <section id="tab-log" style="display:none">
     <div class="cal-card">
-      <div class="cal-nav">
-        <button type="button" id="calPrevBtn" aria-label="Previous month">&#8592;</button>
-        <div class="cal-month-label" id="calMonthLabel"></div>
-        <button type="button" id="calNextBtn" aria-label="Next month">&#8594;</button>
-      </div>
-      <div class="cal-weekdays">
-        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-      </div>
-      <div class="cal-grid" id="calGrid"></div>
       <div class="cal-legend">
         <span><i class="dot Present"></i>Present</span>
         <span><i class="dot Leave"></i>Leave</span>
         <span><i class="dot PublicHoliday"></i>Holiday</span>
         <span><i class="dot Absent"></i>Absent</span>
       </div>
+      <div id="calScroll"></div>
     </div>
   </section>
 
@@ -591,17 +595,33 @@ input, select, textarea{font-size:16px !important;}
   <!-- CLIENTS TAB -->
   <section id="tab-clients" style="display:none">
     <div class="card">
-      <h2><span class="num">1</span> Add a client</h2>
-      <div class="add-client-row">
-        <input type="text" id="newClientName" placeholder="e.g. Pak China Investment Company Limited">
-        <button type="button" id="addClientBtn">Add client</button>
+      <h2><span class="num">&#128202;</span> Time spent</h2>
+      <div class="pie-wrap">
+        <div class="pie-chart" id="pieChart"></div>
+        <div class="pie-view-label" id="pieViewLabel">By department</div>
       </div>
-      <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0;">Add each client here first — only registered clients show up when you mark attendance on the Today tab.</p>
+      <div class="pie-legend" id="pieLegend"></div>
+      <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;text-align:center;">Tap the chart to switch between department and client view</p>
+    </div>
+    <div class="card">
+      <h2><span class="num">1</span> Clients</h2>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 12px;">Only registered clients show up when you mark attendance on the Today tab.</p>
+      <button type="button" class="btn-primary" id="openAddClientBtn" style="width:100%;">&plus; Add client</button>
     </div>
     <div id="clientsRegistryList"></div>
-    <div id="clientsList"></div>
   </section>
 </main>
+
+<div class="modal-bg" id="addClientModalBg">
+  <div class="modal">
+    <div class="modal-hd"><h3>Add a client</h3><button id="closeAddClientModal">&times;</button></div>
+    <label>Client name</label>
+    <input type="text" id="newClientNameInput" placeholder="e.g. Pak China Investment Company Limited">
+    <label>Audit period (optional)</label>
+    <input type="text" id="newClientPeriodInput" placeholder="e.g. Jun 30, 2025">
+    <button type="button" class="btn-primary" id="confirmAddClientBtn" style="margin-top:16px;width:100%;">Add client</button>
+  </div>
+</div>
 
 <div class="stamp-overlay" id="stampOverlay">
   <div class="stamp-badge" id="stampBadge">
@@ -1015,7 +1035,7 @@ function updateFormLockState(dateStr){
   const existing = entries[dateStr];
   const isLockedEdit = !!existing && settings.locked;
   document.getElementById('lockBanner').style.display = isLockedEdit ? 'block' : 'none';
-  ['f-dept','f-holidayworked','f-remark','f-reason','saveBtn','addWorkBtn'].forEach(id=>{
+  ['f-dept','f-holidayworked','f-remark','f-reason','saveBtn','addWorkBtn','deleteEntryBtn'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.disabled = isLockedEdit;
   });
@@ -1106,6 +1126,7 @@ function resetTodayForm(dateStr){
     document.getElementById('f-reason').value = '';
     addWorkRow('','');
   }
+  document.getElementById('deleteEntryBtn').style.display = existing ? 'block' : 'none';
   applyFutureDateGuard(dateStr);
   updateFormLockState(dateStr);
 }
@@ -1172,39 +1193,41 @@ function openEdit(dateStr){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ---------- Calendar (Log tab) ----------
-let calViewYear, calViewMonth; // 0-indexed month, current viewed month
-function initCalendarView(){
-  const now = new Date();
-  calViewYear = now.getFullYear();
-  calViewMonth = now.getMonth();
-}
-function renderCalendar(){
-  const label = document.getElementById('calMonthLabel');
-  label.textContent = new Date(calViewYear, calViewMonth, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
-
-  const firstDow = new Date(calViewYear, calViewMonth, 1).getDay();
-  const daysInMonth = new Date(calViewYear, calViewMonth+1, 0).getDate();
+// ---------- Calendar (Log tab) \u2014 continuous scroll, all months of the articleship ----------
+let calendarBuilt = false;
+function renderMonthBlock(y, m){
+  const label = new Date(y,m,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const firstDow = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
   const t = todayStr();
-
-  let html = '';
-  for(let i=0;i<firstDow;i++) html += '<div class="cal-day empty"></div>';
+  let cells = '';
+  for(let i=0;i<firstDow;i++) cells += '<div class="cal-day empty"></div>';
   for(let d=1; d<=daysInMonth; d++){
-    const ds = calViewYear+'-'+String(calViewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const ds = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const e = entries[ds];
     const statusClass = e ? (e.status||'').replace(/\s+/g,'') : '';
     const classes = ['cal-day'];
     if(e){ classes.push('has-entry', statusClass); }
     if(ds===t) classes.push('today');
-    html += `<div class="${classes.join(' ')}" ${e?`onclick="openDayDetail('${ds}')"`:''}>${d}</div>`;
+    cells += `<div class="${classes.join(' ')}" data-date="${ds}">${d}</div>`;
   }
-  document.getElementById('calGrid').innerHTML = html;
+  return `<div class="cal-month-block" data-ym="${y}-${String(m+1).padStart(2,'0')}">
+    <div class="cal-month-label">${label}</div>
+    <div class="cal-weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+    <div class="cal-grid">${cells}</div>
+  </div>`;
 }
-function calShiftMonth(delta){
-  calViewMonth += delta;
-  if(calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
-  if(calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
-  renderCalendar();
+function renderCalendar(){
+  const start = new Date(ARTICLESHIP_START+'T00:00:00');
+  const end = new Date(ARTICLESHIP_END+'T00:00:00');
+  let y = start.getFullYear(), m = start.getMonth();
+  const endY = end.getFullYear(), endM = end.getMonth();
+  let html = '';
+  while(y < endY || (y===endY && m<=endM)){
+    html += renderMonthBlock(y, m);
+    m++; if(m>11){ m=0; y++; }
+  }
+  document.getElementById('calScroll').innerHTML = html;
 }
 function openDayDetail(dateStr){
   const e = entries[dateStr];
@@ -1221,17 +1244,40 @@ function openDayDetail(dateStr){
       ${e.reason?`<div class="dd-row"><span class="dd-label">Note</span><span class="dd-val">${escapeHtml(e.reason)}</span></div>`:''}
       ${(e.day==='Saturday'||e.day==='Sunday'||e.holidayWorked) && e.status==='Present' ? `<div class="dd-row"><span class="dd-label">Firm claim</span><span class="dd-val">${e.claimApproved?'Approved':'Pending approval'}</span></div>` : ''}
       <button type="button" class="btn-primary" id="editDayBtn">Edit this day</button>
+      <button type="button" class="btn-secondary" id="deleteDayBtn" style="margin-top:8px;width:100%;background:none;border-color:var(--absent);color:var(--absent);">Delete this entry</button>
     </div>
   `;
   document.getElementById('editDayBtn').addEventListener('click', ()=>{ closeDayModal(); openEdit(dateStr); });
+  document.getElementById('deleteDayBtn').addEventListener('click', ()=>{ deleteEntryWithConfirm(dateStr); });
   document.getElementById('editModalBg').classList.add('show');
 }
 function closeDayModal(){
   document.getElementById('editModalBg').classList.remove('show');
 }
-function renderLog(){
-  if(calViewYear===undefined) initCalendarView();
+// Shared by the calendar's delete button and the Today tab's delete button.
+// Locked days can't be deleted any more than they can be edited \u2014 same protection.
+async function deleteEntryWithConfirm(dateStr){
+  if(!entries[dateStr]) return;
+  if(settings.locked){ showToast('Unlock the register first to delete this entry'); return; }
+  const ok = confirm(`Delete the attendance record for ${fmtDate(dateStr)}? This can't be undone.`);
+  if(!ok) return;
+  delete entries[dateStr];
+  await persistEntries();
+  renderHeader();
+  renderTodayStatus();
+  closeDayModal();
   renderCalendar();
+  if(document.getElementById('f-date').value === dateStr) resetTodayForm(dateStr);
+  showToast('Entry deleted for ' + fmtDate(dateStr));
+}
+function renderLog(){
+  renderCalendar(); // always refresh so newly saved/deleted days show up immediately
+  if(!calendarBuilt){
+    calendarBuilt = true;
+    const ym = todayStr().slice(0,7);
+    const block = document.querySelector(`.cal-month-block[data-ym="${ym}"]`);
+    if(block && block.scrollIntoView) block.scrollIntoView({block:'start'});
+  }
 }
 
 // ---------- Client registry (add-client-first workflow) ----------
@@ -1240,11 +1286,12 @@ function populateDeptList(){ /* no-op: department is now a fixed dropdown */ }
 // registry-add helpers below since work-row selects are rebuilt on demand instead).
 function populateClientSelects(){ /* no-op placeholder: work rows rebuild their own options via addWorkRow */ }
 
-async function addClient(name){
+async function addClient(name, period){
   name = name.trim();
   if(!name) return;
   if(clients[name]){ showToast('That client is already added'); return; }
   clients[name] = { periods: [] };
+  if(period && period.trim()) clients[name].periods.push(period.trim());
   await persistClients();
   renderRegistry();
   refreshWorkRowClientOptions();
@@ -1385,36 +1432,64 @@ async function renameClient(oldName, newNameRaw){
   if(document.getElementById('tab-clients').style.display!=='none') renderClients();
 }
 
-function renderClients(){
-  renderRegistry();
-  const byClient = {};
+// ---------- Time-spent pie chart (Clients tab) ----------
+const PIE_PALETTE = ['#8B2E2E','#2F6B3E','#B8860B','#5B4B8A','#4A5568','#C4756B','#3C6E47','#A67C00','#7C6BA6','#8A97A8','#6B8CA6','#9A6B4A'];
+let pieView = 'dept'; // 'dept' or 'client'
+const WORKING_STATUSES = ['Present','WFH','Half Day'];
+function computeDeptBreakdown(){
+  const counts = {};
   Object.values(entries).forEach(e=>{
-    (e.work||[]).forEach(w=>{
-      if(!w.client) return;
-      if(!byClient[w.client]) byClient[w.client] = {days:0, periods:{}};
-      byClient[w.client].days++;
-      const p = w.period || 'Unspecified';
-      byClient[w.client].periods[p] = (byClient[w.client].periods[p]||0)+1;
-    });
+    if(WORKING_STATUSES.includes(e.status)){
+      const d = e.dept || 'Unspecified';
+      counts[d] = (counts[d]||0)+1;
+    }
   });
-  const names = Object.keys(byClient).sort((a,b)=>byClient[b].days-byClient[a].days);
-  const container = document.getElementById('clientsList');
-  if(!names.length){
-    container.innerHTML = '';
+  return counts;
+}
+function computeClientBreakdown(){
+  const counts = {};
+  Object.values(entries).forEach(e=>{
+    if(WORKING_STATUSES.includes(e.status)){
+      if(e.work && e.work.length){
+        e.work.forEach(w=>{ counts[w.client] = (counts[w.client]||0)+1; });
+      } else {
+        counts['Unspecified'] = (counts['Unspecified']||0)+1;
+      }
+    } else {
+      counts['Off (Leave / Holiday / Absent)'] = (counts['Off (Leave / Holiday / Absent)']||0)+1;
+    }
+  });
+  return counts;
+}
+function renderPieChart(){
+  const counts = pieView==='dept' ? computeDeptBreakdown() : computeClientBreakdown();
+  const entriesArr = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total = entriesArr.reduce((a,[,v])=>a+v,0);
+  const pieEl = document.getElementById('pieChart');
+  const legendEl = document.getElementById('pieLegend');
+  document.getElementById('pieViewLabel').textContent = pieView==='dept' ? 'By department (tap to switch)' : 'By client (tap to switch)';
+  if(!total){
+    pieEl.style.background = 'var(--line-soft)';
+    legendEl.innerHTML = '<div class="registry-empty">No days logged yet</div>';
     return;
   }
-  container.innerHTML = `<div class="card" style="padding-top:14px;">
-    <h2><span class="num">&sum;</span> Time by client</h2>
-    ${names.map(n=>{
-      const c = byClient[n];
-      const periods = Object.entries(c.periods).sort((a,b)=>b[1]-a[1])
-        .map(([p,cnt])=>`<span class="period-tag"><b>${cnt}</b> ${escapeHtml(p)}</span>`).join('');
-      return `<div class="client-card">
-        <div class="crow"><span class="cname">${escapeHtml(n)}</span><span class="cdays">${c.days} day${c.days===1?'':'s'}</span></div>
-        <div>${periods}</div>
-      </div>`;
-    }).join('')}
-  </div>`;
+  let acc = 0;
+  const stops = entriesArr.map(([label,val],i)=>{
+    const startPct = (acc/total)*100;
+    acc += val;
+    const endPct = (acc/total)*100;
+    return `${PIE_PALETTE[i%PIE_PALETTE.length]} ${startPct}% ${endPct}%`;
+  });
+  pieEl.style.background = `conic-gradient(${stops.join(', ')})`;
+  legendEl.innerHTML = entriesArr.map(([label,val],i)=>{
+    const pct = ((val/total)*100).toFixed(1);
+    return `<div class="pie-legend-row"><i class="pie-dot" style="background:${PIE_PALETTE[i%PIE_PALETTE.length]}"></i><span class="pl-label">${escapeHtml(label)}</span><span class="pl-val">${val}d \u00b7 ${pct}%</span></div>`;
+  }).join('');
+}
+
+function renderClients(){
+  renderRegistry();
+  renderPieChart();
 }
 
 // ---------- Claims (weekend/holiday worked \u2014 pending firm approval) ----------
@@ -1619,22 +1694,42 @@ async function init(){
   });
   document.getElementById('addWorkBtn').addEventListener('click', ()=>addWorkRow('',''));
   document.getElementById('saveBtn').addEventListener('click', saveToday);
+  document.getElementById('deleteEntryBtn').addEventListener('click', ()=>{
+    deleteEntryWithConfirm(document.getElementById('f-date').value);
+  });
   document.getElementById('f-date').addEventListener('change', (e)=>resetTodayForm(e.target.value));
 
-  document.getElementById('addClientBtn').addEventListener('click', ()=>{
-    const input = document.getElementById('newClientName');
-    addClient(input.value);
-    input.value='';
+  document.getElementById('openAddClientBtn').addEventListener('click', ()=>{
+    document.getElementById('newClientNameInput').value = '';
+    document.getElementById('newClientPeriodInput').value = '';
+    document.getElementById('addClientModalBg').classList.add('show');
+    document.getElementById('newClientNameInput').focus();
   });
-  document.getElementById('newClientName').addEventListener('keydown', (e)=>{
-    if(e.key==='Enter'){ addClient(e.target.value); e.target.value=''; }
+  document.getElementById('closeAddClientModal').addEventListener('click', ()=>{
+    document.getElementById('addClientModalBg').classList.remove('show');
+  });
+  document.getElementById('addClientModalBg').addEventListener('click', (e)=>{
+    if(e.target.id==='addClientModalBg') document.getElementById('addClientModalBg').classList.remove('show');
+  });
+  document.getElementById('confirmAddClientBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('newClientNameInput').value;
+    const period = document.getElementById('newClientPeriodInput').value;
+    if(!name.trim()){ showToast('Enter a client name'); return; }
+    await addClient(name, period);
+    document.getElementById('addClientModalBg').classList.remove('show');
+  });
+  document.getElementById('pieChart').addEventListener('click', ()=>{
+    pieView = pieView==='dept' ? 'client' : 'dept';
+    renderPieChart();
   });
 
   document.querySelectorAll('.tab-btn').forEach(b=>{
     b.addEventListener('click', ()=>switchTab(b.dataset.tab));
   });
-  document.getElementById('calPrevBtn').addEventListener('click', ()=>calShiftMonth(-1));
-  document.getElementById('calNextBtn').addEventListener('click', ()=>calShiftMonth(1));
+  document.getElementById('calScroll').addEventListener('click', (e)=>{
+    const cell = e.target.closest('.cal-day.has-entry');
+    if(cell) openDayDetail(cell.dataset.date);
+  });
   document.getElementById('closeModal').addEventListener('click', closeDayModal);
   document.getElementById('editModalBg').addEventListener('click', (e)=>{ if(e.target.id==='editModalBg') closeDayModal(); });
 
