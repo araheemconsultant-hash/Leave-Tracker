@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Attendance Register</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -36,7 +36,7 @@
   --shadow:0 1px 2px rgba(28,43,58,0.06),0 4px 14px rgba(28,43,58,0.05);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;}
+html,body{margin:0;padding:0;overflow-x:hidden;max-width:100vw;}
 body{
   background:var(--bg);
   color:var(--ink);
@@ -1663,6 +1663,31 @@ async function markLeaveRange(){
   showToast(msg);
 }
 
+// ---------- Swipe between tabs ----------
+const TAB_ORDER = ['today','log','balance','claims','clients'];
+let touchStartX = 0, touchStartY = 0;
+function initSwipeNav(){
+  document.addEventListener('touchstart', (e)=>{
+    if(e.touches.length!==1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener('touchend', (e)=>{
+    if(document.querySelector('.modal-bg.show')) return; // don't switch tabs behind an open modal
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    // Require a clearly horizontal, deliberate swipe so vertical scrolling
+    // (the calendar especially) never gets mistaken for a tab change.
+    if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)*1.5){
+      const current = document.querySelector('.tab-btn.active').dataset.tab;
+      const idx = TAB_ORDER.indexOf(current);
+      if(dx < 0 && idx < TAB_ORDER.length-1) switchTab(TAB_ORDER[idx+1]); // swipe left \u2192 next tab
+      else if(dx > 0 && idx > 0) switchTab(TAB_ORDER[idx-1]); // swipe right \u2192 previous tab
+    }
+  }, {passive:true});
+}
+
 // ---------- Init ----------
 async function init(){
   await loadData();
@@ -1674,6 +1699,7 @@ async function init(){
   renderLockUI();
   renderTodayStatus();
   initGoogleAuth();
+  initSwipeNav();
 
   document.getElementById('balChip').addEventListener('click', ()=>switchTab('balance'));
   document.getElementById('dayCountChip').addEventListener('click', ()=>switchTab('log'));
