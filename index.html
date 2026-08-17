@@ -697,6 +697,7 @@ const ARTICLESHIP_END = '2028-01-31';
 let entries = {}; // date -> entry object
 let settings = { allowed: 130, adjustment: -10, locked: true };
 let clients = {}; // clientName -> { periods: [periodLabel, ...] }
+let deletedEntries = {}; // date -> timestamp the entry was deleted (tombstone, so a Drive merge doesn't resurrect it)
 let currentStatus = 'Present';
 let workRowCount = 0;
 
@@ -776,6 +777,11 @@ async function loadData(){
     }
   }catch(e){ console.error('clients load error', e); bootstrapClientsFromEntries(); }
 
+  try{
+    const draw = localStorage.getItem('leave-tracker-deleted-v1');
+    if(draw) deletedEntries = JSON.parse(draw);
+  }catch(e){ console.error('deleted-entries load error', e); }
+
   migrateClientNames();
   persistEntries();
   persistClients();
@@ -799,6 +805,9 @@ function persistEntries(){
   pushToDrive();
 }
 function persistSettings(){
+  // Stamp every settings save with "now" so a later Drive merge can tell which
+  // device's settings are more recent, instead of one device blindly overwriting another.
+  settings.updatedAt = Date.now();
   try{ localStorage.setItem('leave-tracker-settings-v1', JSON.stringify(settings)); }
   catch(e){ console.error('settings save error', e); }
   pushToDrive();
@@ -806,6 +815,11 @@ function persistSettings(){
 function persistClients(){
   try{ localStorage.setItem('leave-tracker-clients-v1', JSON.stringify(clients)); }
   catch(e){ console.error('clients save error', e); }
+  pushToDrive();
+}
+function persistDeleted(){
+  try{ localStorage.setItem('leave-tracker-deleted-v1', JSON.stringify(deletedEntries)); }
+  catch(e){ console.error('deleted-entries save error', e); }
   pushToDrive();
 }
 
@@ -906,6 +920,50 @@ async function driveWriteFile(fileId, content){
   });
 }
 
+// Merge two entry maps by keeping, per date, whichever side has the newer
+// updatedAt timestamp (an entry with no timestamp at all \u2014 e.g. from the
+// original Excel seed \u2014 counts as oldest, so any real save beats it).
+// This replaces a plain "remote wins" overwrite, which is what used to wipe
+// out days you'd just marked locally if they hadn't reached Drive yet.
+function mergeEntries(local, remote){
+  local = local||{}; remote = remote||{};
+  const merged = {};
+  new Set([...Object.keys(local), ...Object.keys(remote)]).forEach(k=>{
+    const l = local[k], r = remote[k];
+    if(l && r) merged[k] = (r.updatedAt||0) > (l.updatedAt||0) ? r : l;
+    else merged[k] = l || r;
+  });
+  return merged;
+}
+// Union the two tombstone maps, keeping the newer deletion time per date.
+function mergeDeleted(local, remote){
+  local = local||{}; remote = remote||{};
+  const merged = {...local};
+  Object.keys(remote).forEach(k=>{ merged[k] = Math.max(merged[k]||0, remote[k]); });
+  return merged;
+}
+// Apply tombstones after merging entries, so a day deleted on one device
+// doesn't silently come back just because another device's copy is older.
+function applyTombstones(entriesMap, tombstones){
+  Object.keys(tombstones).forEach(ds=>{
+    const e = entriesMap[ds];
+    if(e && tombstones[ds] >= (e.updatedAt||0)) delete entriesMap[ds];
+  });
+  return entriesMap;
+}
+// Union client lists (registered clients + their audit periods) rather than
+// letting one device's list replace the other's.
+function mergeClients(local, remote){
+  local = local||{}; remote = remote||{};
+  const merged = {};
+  new Set([...Object.keys(local), ...Object.keys(remote)]).forEach(name=>{
+    const lp = (local[name]&&local[name].periods)||[];
+    const rp = (remote[name]&&remote[name].periods)||[];
+    merged[name] = { periods: [...new Set([...lp, ...rp])] };
+  });
+  return merged;
+}
+
 async function syncFromDrive(){
   try{
     let fileId = await driveFindFile();
@@ -913,9 +971,11 @@ async function syncFromDrive(){
       driveFileId = fileId;
       const text = await driveReadFile(fileId);
       const remote = JSON.parse(text || '{}');
-      if(remote.entries) entries = remote.entries;
-      if(remote.settings) settings = remote.settings;
-      if(remote.clients) clients = remote.clients;
+      entries = mergeEntries(entries, remote.entries);
+      deletedEntries = mergeDeleted(deletedEntries, remote.deleted);
+      applyTombstones(entries, deletedEntries);
+      if(remote.settings) settings = (remote.settings.updatedAt||0) > (settings.updatedAt||0) ? remote.settings : settings;
+      clients = mergeClients(clients, remote.clients);
       if(settings.locked===undefined) settings.locked = true;
       Object.values(entries).forEach(e=>{ if(e.claimApproved===undefined) e.claimApproved=false; });
       const DEPT_MAP2 = {'Articles - Corporate':'Corporate','Articles - Audit':'Audit','Articles - Tax':'Tax','Articles - Advisory':'Advisory'};
@@ -925,11 +985,12 @@ async function syncFromDrive(){
       localStorage.setItem('leave-tracker-entries-v1', JSON.stringify(entries));
       localStorage.setItem('leave-tracker-settings-v1', JSON.stringify(settings));
       localStorage.setItem('leave-tracker-clients-v1', JSON.stringify(clients));
+      localStorage.setItem('leave-tracker-deleted-v1', JSON.stringify(deletedEntries));
     } else {
-      driveFileId = await driveCreateFile(JSON.stringify({entries, settings, clients}));
+      driveFileId = await driveCreateFile(JSON.stringify({entries, settings, clients, deleted: deletedEntries}));
     }
     setSyncStatus('synced','Synced with Drive');
-    pushToDrive(); // write back any corrections migrateClientNames() just made
+    pushToDrive(); // write the merged result straight back so Drive is caught up on this device's data too
     renderHeader(); populateDeptList(); populateClientSelects();
     const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
     switchTab(activeTab);
@@ -939,17 +1000,37 @@ async function syncFromDrive(){
   }
 }
 
-async function pushToDrive(){
+async function pushToDrive(retrying){
   if(!signedIn || !accessToken) return;
   try{
     setSyncStatus('syncing','Saving to Drive...');
-    const payload = JSON.stringify({entries, settings, clients});
+    const payload = JSON.stringify({entries, settings, clients, deleted: deletedEntries});
     if(!driveFileId) driveFileId = await driveFindFile();
     if(driveFileId) await driveWriteFile(driveFileId, payload);
     else driveFileId = await driveCreateFile(payload);
     setSyncStatus('synced','Synced with Drive');
   }catch(e){
     console.error('drive push error', e);
+    // Access tokens expire after about an hour and this app doesn't hold onto
+    // them across reloads, so a stale token is the most common reason a push
+    // fails silently. Try one silent refresh + retry before giving up.
+    if(!retrying && tokenClient){
+      try{
+        await new Promise((resolve)=>{
+          const prevCallback = tokenClient.callback;
+          const timeout = setTimeout(()=>{ tokenClient.callback = prevCallback; resolve(); }, 5000);
+          tokenClient.callback = (resp)=>{
+            clearTimeout(timeout);
+            tokenClient.callback = prevCallback;
+            if(!resp.error){ accessToken = resp.access_token; }
+            resolve();
+          };
+          tokenClient.requestAccessToken({prompt:''});
+        });
+        await pushToDrive(true);
+        return;
+      }catch(e2){ console.error('drive push retry error', e2); }
+    }
     setSyncStatus('error','Could not sync \u2014 saved locally');
   }
 }
@@ -1168,7 +1249,8 @@ async function saveToday(){
     work,
     remark: needsRemark ? remarkVal : '',
     reason: needsRemark ? document.getElementById('f-reason').value.trim() : '',
-    claimApproved: prevApproval
+    claimApproved: prevApproval,
+    updatedAt: Date.now()
   };
   entries[dateStr] = entry;
   settings.locked = true; // auto re-lock after every save
@@ -1272,7 +1354,9 @@ async function deleteEntryWithConfirm(dateStr){
   const ok = confirm(`Delete the attendance record for ${fmtDate(dateStr)}? This can't be undone.`);
   if(!ok) return;
   delete entries[dateStr];
+  deletedEntries[dateStr] = Date.now(); // tombstone, so this deletion survives a Drive merge instead of the day quietly reappearing
   await persistEntries();
+  await persistDeleted();
   renderHeader();
   renderTodayStatus();
   closeDayModal();
@@ -1647,7 +1731,8 @@ async function markLeaveRange(){
       entries[ds] = {
         date: ds, day: dayName(ds), status: 'Leave', dept: dept,
         holidayWorked: false, work: [], remark: remark, reason: reason,
-        claimApproved: existing ? !!existing.claimApproved : false
+        claimApproved: existing ? !!existing.claimApproved : false,
+        updatedAt: Date.now()
       };
       created++;
     }
